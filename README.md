@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SLT Embroidery Designs
 
-## Getting Started
+Full-stack embroidery design shop — Next.js, Prisma (SQLite dev), Auth.js, Razorpay, S3 downloads.
 
-First, run the development server:
+## Setup
 
 ```bash
+npm install --legacy-peer-deps
+cp .env.example .env
+# Set Supabase DATABASE_URL + DIRECT_URL in .env
+npx prisma db push
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Deploy:** see [docs/DEPLOY-VERCEL-SUPABASE.md](docs/DEPLOY-VERCEL-SUPABASE.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Seed accounts**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Admin: `admin@sltembroidery.com` / `Admin@123`
+- Demo: `demo@sltembroidery.com` / `Demo@123`
 
-## Learn More
+Without Razorpay keys, checkout runs in **demo mode** (instant paid orders for testing).
 
-To learn more about Next.js, take a look at the following resources:
+## Admin — product images
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+On **Add product** / **Edit product**, use **Upload image** (saved under `public/uploads/products/` locally) or paste an external image URL. Design **ZIP** files are uploaded on the **edit product** page per format (needs S3 env vars).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Production
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set `DATABASE_URL` to PostgreSQL (update `provider` in `prisma/schema.prisma`), configure Razorpay and S3 env vars (`S3_PUBLIC_URL_BASE` for CDN URLs on uploaded images), and set a strong `AUTH_SECRET`.

@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum FormatType {
+  DST_SMALL
+  DST_LARGE
+  PES
+  JEF
+  EXP
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  passwordHash  String?
+  role          UserRole  @default(USER)
+  image         String?
+  policyAcceptedAt DateTime?
+  accounts      Account[]
+  sessions      Session[]
+  orders        Order[]
+  wishlist      WishlistItem[]
+  downloadGrants DownloadGrant[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Category {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String            @unique
+  description String?
+  imageUrl    String?
+  sortOrder   Int               @default(0)
+  products    ProductCategory[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model Product {
+  id          String            @id @default(cuid())
+  sku         String            @unique
+  title       String
+  slug        String            @unique
+  description String?
+  imageUrl    String
+  basePrice   Int
+  mrpPrice    Int?
+  isNew       Boolean           @default(false)
+  isActive    Boolean           @default(true)
+  keywords    String?
+  formats     ProductFormat[]
+  categories  ProductCategory[]
+  orderItems  OrderItem[]
+  wishlist    WishlistItem[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([sku])
+  @@index([slug])
+}
+
+model ProductCategory {
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+}
+
+model ProductFormat {
+  id            String     @id @default(cuid())
+  productId     String
+  format        FormatType
+  label         String
+  price         Int
+  fileKey       String?
+  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems    OrderItem[]
+  downloadGrants DownloadGrant[]
+
+  @@unique([productId, format])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  status          OrderStatus   @default(PENDING)
+  totalAmount     Int
+  currency        String        @default("INR")
+  razorpayOrderId String?       @unique
+  user            User          @relation(fields: [userId], references: [id])
+  items           OrderItem[]
+  payment         Payment?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model OrderItem {
+  id              String        @id @default(cuid())
+  orderId         String
+  productId       String
+  productFormatId String
+  quantity        Int           @default(1)
+  unitPrice       Int
+  product         Product       @relation(fields: [productId], references: [id])
+  productFormat   ProductFormat @relation(fields: [productFormatId], references: [id])
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  downloadGrants  DownloadGrant[]
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String        @unique
+  status            PaymentStatus @default(CREATED)
+  razorpayPaymentId String?
+  razorpaySignature String?
+  amount            Int
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model DownloadGrant {
+  id            String        @id @default(cuid())
+  userId        String
+  orderItemId   String
+  productFormatId String
+  downloadCount Int           @default(0)
+  maxDownloads  Int           @default(10)
+  expiresAt     DateTime?
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItem     OrderItem     @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  productFormat ProductFormat @relation(fields: [productFormatId], references: [id])
+  createdAt     DateTime      @default(now())
+
+  @@unique([userId, orderItemId, productFormatId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model CustomInquiry {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  phone           String?
+  category        String?
+  message         String
+  referenceImages String?
+  status          String   @default("NEW")
+  createdAt       DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  createdAt DateTime @default(now())
+}
